@@ -23,7 +23,7 @@ buget_reclama_lunar = st.slider(
     "Publicitate lunara (lei)",
     min_value=100,
     max_value=2000,
-    value=1500,
+    value=1000,
     step=50,
 )
 
