@@ -5,7 +5,7 @@ import streamlit as st
 parola_introdusa = st.text_input("Introdu parola de acces:", type="password")
 
 if parola_introdusa != "Draghici1!":
-  st.warning("Te rog să introduci parola corecta pentru a vedea calculatorul.")
+  st.warning("Introduci parola pentru a vedea calculatorul.")
   st.stop()  # Opreste executia aplicatiei daca parola este gresita
 
 # De aici în colo vine codul tău normal de calculator (st.title, slidere, etc.)
