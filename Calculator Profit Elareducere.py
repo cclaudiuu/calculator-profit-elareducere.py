@@ -13,10 +13,10 @@ st.title("Calculator Profit Parteneriat Elareducere")
 
 # Sliders interactive
 vanzari_saptamanale = st.slider(
-    "Vânzări săptămânale (lei)", min_value=3000, max_value=15000, value=5000, step=250
+    "Vânzări săptămânale (lei)", min_value=3000, max_value=15000, value=5000, step=50
 )
 buget_reclama_lunar = st.slider(
-    "Publicitate lunară (lei)", min_value=500, max_value=3000, value=1500, step=100
+    "Publicitate lunară (lei)", min_value=500, max_value=3000, value=1500, step=50
 )
 
 # Calcule
