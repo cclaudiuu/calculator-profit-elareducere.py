@@ -21,7 +21,7 @@ vanzari_lunare = st.slider(
 )
 buget_reclama_lunar = st.slider(
     "Publicitate lunara (lei)",
-    min_value=0,
+    min_value=1,
     max_value=2000,
     value=1500,
     step=50,
