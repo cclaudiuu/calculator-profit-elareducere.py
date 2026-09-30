@@ -14,7 +14,7 @@ st.title("Calculator Profit pentru Elareducere")
 # Sliders interactive
 vanzari_lunare = st.slider(
     "Valoare vanzari fara transport (lei)",
-    min_value=0,
+    min_value=1000,
     max_value=50000,
     value=5000,
     step=50,
