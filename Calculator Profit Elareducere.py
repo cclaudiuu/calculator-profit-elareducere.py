@@ -9,39 +9,39 @@ if parola_introdusa != "Draghici1!":
   st.stop()  # Opreste executia aplicatiei daca parola este gresita
 
 # De aici în colo vine codul tău normal de calculator (st.title, slidere, etc.)
-st.title("Calculator Profit Parteneriat Elareducere")
+st.title("Calculator Profit pentru Elareducere")
 
 # Sliders interactive
-vanzari_saptamanale = st.slider(
-    "Vânzări săptămânale (lei)", min_value=3000, max_value=15000, value=5000, step=50
+vanzari_lunare = st.slider(
+    "Valoare vanzari fara transport (lei)", min_value=1000, max_value=15000, value=5000, step=50
 )
 buget_reclama_lunar = st.slider(
-    "Publicitate lunară (lei)", min_value=500, max_value=3000, value=1500, step=50
+    "Publicitate lunara (lei)", min_value=300, max_value=2000, value=1500, step=50
 )
 
 # Calcule
 reclama_saptamanala = buget_reclama_lunar / 4
-cost_marfa = vanzari_saptamanale / 2.1
+cost_marfa = vanzari_lunare / 2.1
 comision_platforma = vanzari_saptamanale * 0.254
 profit_net = (
-    vanzari_saptamanale
-    - (cost_marfa + comision_platforma + reclama_saptamanala)
+    vanzari_lunare
+    - (cost_marfa + comision_platforma + reclama_)
 )
 marja_neta = (
-    (profit_net / vanzari_saptamanale) * 100 if vanzari_saptamanale > 0 else 0
+    (profit_net / vanzari_lunare) * 100 if vanzari_lunare > 0 else 0
 )
 
 # Afișare rezultate
-st.metric(label="Profit Net Săptămânal", value=f"{profit_net:.2f} lei")
-st.metric(label="Marja Netă", value=f"{marja_neta:.1f}%")
+st.metric(label="Profit Net Lunar", value=f"{profit_net:.2f} lei")
+st.metric(label="Marja Neta", value=f"{marja_neta:.1f}%")
 
 # Generare date pentru grafic
 date_grafic = []
-for v in range(3000, 15001, 500):
-  p = v - (v / 2.1) - (v * 0.254) - reclama_saptamanala
-  date_grafic.append({"Vânzări": v, "Profit Net": p})
+for v in range(2000, 15001, 500):
+  p = v - (v / 2.1) - (v * 0.254) - reclama_lunara
+  date_grafic.append({"Vanzari": v, "Profit Net": p})
 
 df = pd.DataFrame(date_grafic)
 
-st.subheader("Evoluția profitului net în funcție de volumul vânzărilor")
-st.line_chart(df.set_index("Vânzări"))
+st.subheader("Evolutia profitului net in functie de volumul vanzarilor")
+st.line_chart(df.set_index("Vanzari"))
