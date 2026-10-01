@@ -1,5 +1,4 @@
 import pandas as pd
-import plotly.express as px
 import streamlit as st
 
 # --- SECURITATE ---
@@ -217,9 +216,9 @@ elif meniu == "Jurnal Lunar & Istoric (Draghici / Claudiu)":
           st.success("Inregistrarea a fost stearsa! Reincarca pagina.")
           st.rerun()
 
-    # --- GRAFICE CU BASTONASE (BAR CHART INTERACTIV) ---
+    # --- GRAFICE NATIVE STREAMLIT ---
     st.divider()
-    st.subheader("Grafice interactive cu bastonase (pe luni)")
+    st.subheader("Grafice interactive pe luni")
     entitate_grafic = st.selectbox(
         "Alege entitatea pentru graficele comparative",
         ["Draghici", "Claudiu"],
@@ -234,29 +233,15 @@ elif meniu == "Jurnal Lunar & Istoric (Draghici / Claudiu)":
       df_ent = df_ent.sort_values(by=["An", "Luna_Numar"])
       df_ent["Perioada"] = df_ent["Luna"] + " " + df_ent.An.astype(str)
 
-      # Grafic 1: Bastonase pentru Vanzari, Profit Net si Publicitate (corectat)
-      fig_val = px.bar(
-          df_ent,
-          x="Perioada",
-          y=["Vanzari", "Profit Net", "Publicitate"],
-          barmode="group",
-          title=f"Evolutie Valori Financiare (Lei) - {entitate_grafic}",
-          labels={"value": "Valoare (Lei)", "variable": "Indicator"},
+      st.markdown("**Evolutie Valori Financiare (Vanzari, Profit Net, Publicitate - Lei)**")
+      st.bar_chart(
+          df_ent.set_index("Perioada")[
+              ["Vanzari", "Profit Net", "Publicitate"]
+          ]
       )
-      st.plotly_chart(fig_val, use_container_width=True)
 
-      # Grafic 2: Bastonase pentru Marja Neta (%)
-      fig_marja = px.bar(
-          df_ent,
-          x="Perioada",
-          y="Marja Neta (%)",
-          title=f"Evolutie Marja Neta (%) - {entitate_grafic}",
-          text="Marja Neta (%)",
-          color="Marja Neta (%)",
-          color_continuous_scale="Viridis",
-      )
-      fig_marja.update_traces(texttemplate="%{text}%", textposition="outside")
-      st.plotly_chart(fig_marja, use_container_width=True)
+      st.markdown("**Evolutie Marja Neta (%)**")
+      st.bar_chart(df_ent.set_index("Perioada")[["Marja Neta (%)"]])
     else:
       st.info("Nu exista date inregistrate pentru aceasta entitate.")
   else:
