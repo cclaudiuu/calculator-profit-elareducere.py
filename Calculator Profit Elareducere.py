@@ -1,4 +1,5 @@
 import pandas as pd
+import plotly.express as px
 import streamlit as st
 
 # --- SECURITATE ---
@@ -8,14 +9,14 @@ if parola_introdusa != "Draghici1!":
   st.warning("Introdu parola pentru a vedea calculatorul.")
   st.stop()
 
-st.title("Calcul rapid - Elareducere")
+st.title("Manager Financiar - Elareducere")
 
 # --- MENIU LATERAL (NAVIGARE) ---
 meniu = st.sidebar.radio(
     "Navigare", ["Simulator Rapid", "Jurnal Lunar & Istoric (Draghici / Claudiu)"]
 )
 
-# Ordinea lunilor pentru sortare corecta in grafice
+# Ordinea lunilor pentru sortare cronologica corecta
 ordinea_luni = {
     "Ianuarie": 1,
     "Februarie": 2,
@@ -31,7 +32,7 @@ ordinea_luni = {
     "Decembrie": 12,
 }
 
-# --- 1. SIMULATORUL RAPID (Varianta ta clasică) ---
+# --- 1. SIMULATORUL RAPID ---
 if meniu == "Simulator Rapid":
   st.subheader("Simulator Rapid (Slidere)")
 
@@ -50,7 +51,6 @@ if meniu == "Simulator Rapid":
       step=50,
   )
 
-  # Calcule
   cost_marfa = vanzari_lunare / 2.1
   comision_platforma = vanzari_lunare * 0.254
   profit_net = (
@@ -60,11 +60,9 @@ if meniu == "Simulator Rapid":
       (profit_net / vanzari_lunare) * 100 if vanzari_lunare > 0 else 0
   )
 
-  # Afisare rezultate
   st.metric(label="Profit Net Lunar", value=f"{profit_net:.2f} lei")
   st.metric(label="Marja Neta", value=f"{marja_neta:.1f}%")
 
-  # Generare date pentru grafic
   date_grafic = []
   for v in range(0, 15001, 500):
     p = v - (v / 2.1) - (v * 0.254) - buget_reclama_lunar
@@ -78,7 +76,6 @@ if meniu == "Simulator Rapid":
 elif meniu == "Jurnal Lunar & Istoric (Draghici / Claudiu)":
   st.subheader("Jurnal Financiar pe Luni")
 
-  # Initializare memorie pentru istoricul in sesiune
   if "istoric" not in st.session_state:
     st.session_state.istoric = pd.DataFrame(
         columns=[
@@ -149,72 +146,118 @@ elif meniu == "Jurnal Lunar & Istoric (Draghici / Claudiu)":
           f"Datele pentru {entitate} ({luna} {an}) au fost salvate cu succes!"
       )
 
-  # --- GESTIONARE SI STERGERE INREGISTRARI ---
   st.divider()
-  st.subheader("Istoric Inregistrari (Gestionare)")
+  st.subheader("Istoric & Vizualizare Detaliata")
 
   if not st.session_state.istoric.empty:
-    # Afisam tabelul complet
     st.dataframe(st.session_state.istoric, use_container_width=True)
 
-    # Optiune de stergere a unei inregistrari gresite
-    st.markdown("### Sterge o inregistrare gresita")
-    optiuni_stergere = [
-        f"{row.Index}: {row.Entitate} - {row.Luna} {row.An} (Vanzari: {row.Vanzari} lei)"
-        for row in st.session_state.istoric.itertuples()
-    ]
+    # --- SELECTIE SPECIFICA LUNA / ENTITATE ---
+    st.markdown("### Vizualizare rapida pe o luna anume")
+    col_f1, col_f2, col_f3 = st.columns(3)
+    with col_f1:
+      ent_select = st.selectbox(
+          "Filtreaza Entitate", ["Draghici", "Claudiu"], key="f_ent"
+      )
+    with col_f2:
+      ani_disponibili = sorted(
+          st.session_state.istoric["An"].unique().tolist()
+      )
+      an_select = st.selectbox(
+          "Filtreaza An",
+          ani_disponibili if ani_disponibili else [2026],
+          key="f_an",
+      )
+    with col_f3:
+      luni_disponibile = st.session_state.istoric[
+          (st.session_state.istoric["Entitate"] == ent_select)
+          & (st.session_state.istoric["An"] == an_select)
+      ]["Luna"].tolist()
+      luna_select = st.selectbox(
+          "Filtreaza Luna",
+          luni_disponibile if luni_disponibile else ["Niciuna disponibila"],
+          key="f_luna",
+      )
 
-    selectie_de_sters = st.selectbox(
-        "Alege inregistrarea pe care doresti o stergi:", ["Niciuna"] + optiuni_stergere
-    )
-
-    if selectie_de_sters != "Niciuna":
-      if st.button("Sterge randul selectat"):
-        index_de_sters = int(selectie_de_sters.split(":")[0])
-        st.session_state.istoric = (
-            st.session_state.istoric.drop(index_de_sters)
-            .reset_index(drop=True)
+    # Afisare date numerice pentru luna selectata
+    if luna_select != "Niciuna disponibila":
+      rand_luna = st.session_state.istoric[
+          (st.session_state.istoric["Entitate"] == ent_select)
+          & (st.session_state.istoric["An"] == an_select)
+          & (st.session_state.istoric["Luna"] == luna_select)
+      ]
+      if not rand_luna.empty:
+        r = rand_luna.iloc[0]
+        st.markdown(
+            f"#### Valori numerice pentru **{ent_select}** ({luna_select}"
+            f" {an_select}):"
         )
-        st.success("Înregistrarea a fost ștersă cu succes! Reîncarcă pagina.")
-        st.rerun()
+        m1, m2, m3, m4 = st.columns(4)
+        m1.metric("Vânzări", f"{r['Vanzari']} lei")
+        m2.metric("Publicitate", f"{r['Publicitate']} lei")
+        m3.metric("Profit Net", f"{r['Profit Net']} lei")
+        m4.metric("Marjă Netă", f"{r['Marja Neta (%)']}%")
 
-    # --- GRAFICE DE EVOLUTIE ---
+    # --- STERGERE INREGISTRARE ---
+    with st.expander("Optiuni de stergere inregistrare gresita"):
+      optiuni_stergere = [
+          f"{row.Index}: {row.Entitate} - {row.Luna} {row.An} (Vanzari:"
+          f" {row.Vanzari} lei)"
+          for row in st.session_state.istoric.itertuples()
+      ]
+      selectie_de_sters = st.selectbox(
+          "Alege rândul de șters:", ["Niciuna"] + optiuni_stergere
+      )
+      if selectie_de_sters != "Niciuna":
+        if st.button("Șterge rândul selectat"):
+          idx = int(selectie_de_sters.split(":")[0])
+          st.session_state.istoric = (
+              st.session_state.istoric.drop(idx).reset_index(drop=True)
+          )
+          st.success("Înregistrarea a fost stearsa! Reincarca pagina.")
+          st.rerun()
+
+    # --- GRAFICE CU BASTONASE (BAR CHART INTERACTIV) ---
     st.divider()
-    entitate_selectata = st.selectbox(
-        "Alege entitatea pentru graficul de evolutie", ["Draghici", "Claudiu"]
+    st.subheader("Grafice interactive cu bastonase (pe luni)")
+    entitate_grafic = st.selectbox(
+        "Alege entitatea pentru graficele comparative",
+        ["Draghici", "Claudiu"],
+        key="g_ent",
     )
-    df_entitate = st.session_state.istoric[
-        st.session_state.istoric["Entitate"] == entitate_selectata
+    df_ent = st.session_state.istoric[
+        st.session_state.istoric["Entitate"] == entitate_grafic
     ].copy()
 
-    if not df_entitate.empty:
-      st.markdown(
-          f"### Evolutie in timp pentru: **{entitate_selectata}**"
+    if not df_ent.empty:
+      df_ent["Luna_Numar"] = df_ent.Luna.map(ordinea_luni)
+      df_ent = df_ent.sort_values(by=["An", "Luna_Numar"])
+      df_ent["Perioada"] = df_ent["Luna"] + " " + df_ent.An.astype(str)
+
+      # Grafic 1: Bastonase pentru Vanzari, Profit Net si Publicitate
+      fig_val = px.bar(
+          df_ent,
+          x="Perioada",
+          y=["Vanzari", "Profit Net", "Publicitate"],
+          barmode="group",
+          title=f"Evolutie Valori Financiare (Lei) - {entitate_grafic}",
+          labels={"value": "Valoare (Lei)", "variable", "Indicator"},
       )
+      st.plotly_chart(fig_val, use_container_width=True)
 
-      # Sortam corect cronologic dupa an si luna
-      df_entitate["Luna_Numar"] = df_entitate["Luna"].map(ordinea_luni)
-      df_entitate = df_entitate.sort_values(by=["An", "Luna_Numar"])
-
-      df_entitate["Perioada"] = (
-          df_entitate["Luna"] + " " + df_entitate["An"].astype(str)
+      # Grafic 2: Bastonase pentru Marja Neta (%)
+      fig_marja = px.bar(
+          df_ent,
+          x="Perioada",
+          y="Marja Neta (%)",
+          title=f"Evolutie Marja Neta (%) - {entitate_grafic}",
+          text="Marja Neta (%)",
+          color="Marja Neta (%)",
+          color_continuous_scale="Viridis",
       )
-
-      # Grafic Vanzari vs Profit Net
-      st.subheader("Evolutie Vanzari vs Profit Net vs Publicitate (lei)")
-      st.line_chart(
-          df_entitate.set_index("Perioada")[
-              ["Vanzari", "Profit Net", "Publicitate"]
-          ]
-      )
-
-      # Grafic Marja Neta
-      st.subheader("Evolutie Marja Neta (%)")
-      st.line_chart(df_entitate.set_index("Perioada")[["Marja Neta (%)"]])
+      fig_marja.update_traces(texttemplate="%{text}%", textposition="outside")
+      st.plotly_chart(fig_marja, use_container_width=True)
     else:
-      st.info(
-          "Nu există încă date înregistrate pentru această entitate. Completează"
-          " formularul de sus."
-      )
+      st.info("Nu există date înregistrate pentru această entitate.")
   else:
-    st.info("Încă nu ai salvat nicio înregistrare. Folosește formularul de sus.")
+    st.info("Încă nu ai salvat nicio înregistrare în jurnal.")
