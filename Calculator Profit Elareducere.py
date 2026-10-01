@@ -10,20 +10,10 @@ st.set_page_config(
 )
 
 # --- CONFIGURARE CONEXIUNE GOOGLE SHEETS ---
-# Pentru a citi/scrie în cloud fără probleme locale, folosim gspread legat de Google Sheets.
-# Datele de autentificare (cheia JSON) se pun în Streamlit Secrets (.streamlit/secrets.toml)
-
-
-@st.cache_resource
-init_connection = (
-    lambda: None
-)  # (Funcție ajutătoare pentru conexiune sau citire directă)
 
 
 def incarca_date_din_cloud():
   try:
-    # Dacă folosești un Google Sheet public sau conectat prin Secrets:
-    # Metoda simplă cu st.secrets pentru securitate maximă pe Streamlit Cloud:
     scope = [
         "https://spreadsheets.google.com/feeds",
         "https://www.googleapis.com/auth/drive",
@@ -34,7 +24,7 @@ def incarca_date_din_cloud():
     creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
     client = gspread.authorize(creds)
 
-    # Numele foii tale Google (modifică cu numele fișierului tău din Google Drive)
+    # Numele foii tale Google
     sheet_name = "Baza_Date_Elareducere"
     sheet = client.open(sheet_name).sheet1
 
@@ -67,11 +57,10 @@ if not df.empty:
   st.subheader("Date financiare existente:")
   st.dataframe(df, use_container_width=True)
 
-  # Secțiune pentru adăugare date noi (disponibilă pentru ambele entități)
+  # Secțiune pentru adăugare date noi
   st.subheader("Adaugă o înregistrare nouă")
 
   with st.form("formular_date"):
-    # Exemplu de câmpuri (adaptează-le după coloanele tale exacte din tabel)
     data_intrare = st.date_input("Data", datetime.today())
     client_furnizor = st.text_input("Client / Furnizor")
     valoare = st.number_input("Valoare (RON)", min_value=0.0, step=0.01)
@@ -83,18 +72,12 @@ if not df.empty:
 
     if submit_button:
       if client_furnizor:
-        noua_linie = [
-            str(data_intrare),
-            client_furnizor,
-            valoare,
-            status,
-        ]  # adaptează ordinea coloanelor
+        noua_linie = [str(data_intrare), client_furnizor, valoare, status]
 
-        # Scriere direct în Google Sheet în timp real
         if sheet_connection:
           sheet_connection.append_row(noua_linie)
           st.success("Datele au fost salvate cu succes în cloud!")
-          st.rerun()  # reîmprospătează pagina pentru a vedea datele noi
+          st.rerun()
       else:
         st.warning("Te rog să completezi cel puțin Numele Clientului/Furnizorului.")
 else:
