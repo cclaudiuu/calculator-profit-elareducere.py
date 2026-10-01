@@ -13,7 +13,7 @@ if parola_introdusa != "Draghici1!":
 st.title("Calcul Rapid - Elareducere")
 
 
-# --- CONEXIUNEA LA GOOGLE SHEETS (MODERNĂ FĂRĂ JSON PRIVAT) ---
+# --- CONEXIUNEA LA GOOGLE SHEETS (CORECTATĂ PENTRU PEM) ---
 @st.cache_resource
 def init_connection():
     scope = [
@@ -22,11 +22,17 @@ def init_connection():
     ]
     
     sec = st.secrets["gcp_service_account"]
+    
+    # Ne asigurăm că liniile din cheia privată sunt interpretate corect
+    p_key = sec["private_key"]
+    if "\\n" in p_key:
+        p_key = p_key.replace("\\n", "\n")
+
     creds_dict = {
         "type": "service_account",
         "project_id": sec["project_id"],
         "private_key_id": sec.get("private_key_id", ""),
-        "private_key": sec.get("private_key", ""),
+        "private_key": p_key,
         "client_email": sec["client_email"],
         "client_id": sec["client_id"],
         "auth_uri": "https://accounts.google.com/o/oauth2/auth",
@@ -39,7 +45,6 @@ def init_connection():
     client = gspread.authorize(creds)
     sheet = client.open("Baza_Date_Elareducere").sheet1
     return sheet
-
 
 def incarca_date_din_sheet():
     try:
