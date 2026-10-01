@@ -13,7 +13,7 @@ st.title("Calcul Rapid - Elareducere")
 
 # URL-ul Web App generat din Google Apps Script
 # URL-ul Web App actualizat (Versiunea 7)
-https://script.google.com/macros/s/AKfycbz3SZLxLT0oDqtZWomyE4ctsXSS6Nk45bxBABb1DnCOg64U9LppofYHcCjKXC9-q9N-/exec
+WEB_APP_URL = "https://script.google.com/macros/s/AKfycbz3SZLxLT0oDqtZWomyE4ctsXSS6Nk45bxBABb1DnCOg64U9LppofYHcCjKXC9-q9N-/exec"
 # --- CONEXIUNEA PRIN GOOGLE APPS SCRIPT ---
 def incarca_date_din_sheet():
     try:
