@@ -1,7 +1,6 @@
-import gspread
-from google.oauth2.service_account import Credentials
-import pandas as pd
 import streamlit as st
+import requests
+import pandas as pd
 
 # --- SECURITATE ---
 parola_introdusa = st.text_input("Introdu parola de acces:", type="password")
@@ -12,47 +11,16 @@ if parola_introdusa != "Draghici1!":
 
 st.title("Calcul Rapid - Elareducere")
 
+# URL-ul Web App generat din Google Apps Script
+WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwFc_zOJyIN5sxVqRObFd8nXzCVVR0XzjGXhZFGodnW4K0f2u5BmcwEwgiVO3B5PgEQrQ/exec"
 
-# --- CONEXIUNEA LA GOOGLE SHEETS (CORECTATĂ PENTRU PEM) ---
-@st.cache_resource
-def init_connection():
-    scope = [
-        "https://www.googleapis.com/auth/spreadsheets",
-        "https://www.googleapis.com/auth/drive",
-    ]
-    
-    sec = st.secrets["gcp_service_account"]
-    
-    # Ne asigurăm că liniile din cheia privată sunt interpretate corect
-    p_key = sec["private_key"]
-    if "\\n" in p_key:
-        p_key = p_key.replace("\\n", "\n")
-
-    creds_dict = {
-        "type": "service_account",
-        "project_id": sec["project_id"],
-        "private_key_id": sec.get("private_key_id", ""),
-        "private_key": p_key,
-        "client_email": sec["client_email"],
-        "client_id": sec["client_id"],
-        "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-        "token_uri": "https://oauth2.googleapis.com/token",
-        "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
-        "client_x509_cert_url": f"https://www.googleapis.com/robot/v1/metadata/x509/{sec['client_email'].replace('@', '%40')}"
-    }
-    
-    creds = Credentials.from_service_account_info(creds_dict, scopes=scope)
-    client = gspread.authorize(creds)
-    sheet = client.open("Baza_Date_Elareducere").sheet1
-    return sheet
-
+# --- CONEXIUNEA PRIN GOOGLE APPS SCRIPT ---
 def incarca_date_din_sheet():
     try:
-        sheet = init_connection()
-        data = sheet.get_all_records()
-        df = pd.DataFrame(data)
-        if df.empty:
-            df = pd.DataFrame(
+        response = requests.get(WEB_APP_URL)
+        data = response.json()
+        if not data or len(data) <= 1:
+            return pd.DataFrame(
                 columns=[
                     "Entitate",
                     "An",
@@ -63,6 +31,12 @@ def incarca_date_din_sheet():
                     "Marja Neta (%)",
                 ]
             )
+        # Prima linie este header-ul, restul sunt datele
+        df = pd.DataFrame(data[1:], columns=data[0])
+        # Convertim tipurile de date numerice unde este cazul
+        for col in ["An", "Vanzari", "Publicitate", "Profit Net", "Marja Neta (%)"]:
+            if col in df.columns:
+                df[col] = pd.to_numeric(df[col], errors="ignore")
         return df
     except Exception as e:
         st.error(f"Erore la incarcarea datelor: {e}")
@@ -81,12 +55,15 @@ def incarca_date_din_sheet():
 
 def salveaza_in_sheet(df):
     try:
-        sheet = init_connection()
-        sheet.clear()
-        sheet.update([df.columns.values.tolist()] + df.values.tolist())
+        # Trimitem tot tabelul sub forma de matrice catre Apps Script
+        payload = [df.columns.values.tolist()] + df.values.tolist()
+        response = requests.post(WEB_APP_URL, json=payload)
+        if response.status_code == 200:
+            st.success("Datele au fost salvate și sincronizate în Google Sheets!")
+        else:
+            st.error("Erore la salvarea în Google Sheets.")
     except Exception as e:
-        st.error(f"Erore la salvarea în Google Sheets: {e}")
-
+        st.error(f"Erore de comunicare: {e}")
 # --- INCARCARE INITIALA IN SESIUNE ---
 if "istoric" not in st.session_state:
     st.session_state.istoric = incarca_date_din_sheet()
