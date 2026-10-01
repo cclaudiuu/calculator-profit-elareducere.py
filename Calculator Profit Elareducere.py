@@ -261,11 +261,9 @@ elif meniu == "Jurnal Lunar & Istoric (Draghici / Claudiu)":
           st.success("Inregistrarea a fost stearsa!")
           st.rerun()
 
-    # --- GRAFICE NATIVE CU BARE ALATURATE (FARA PLOTLY) ---
+    # --- GRAFICE INTUITIVE CU BARE IN PICIORE (VERTICALE) ---
     st.divider()
-    st.subheader(
-        "📈 Evolutia financiara in timp (Bare alaturate nativ in Streamlit)"
-    )
+    st.subheader("📈 Evolutia financiara in timp (Bare verticale)")
 
     col_g1, col_g2 = st.columns(2)
     with col_g1:
@@ -282,16 +280,16 @@ elif meniu == "Jurnal Lunar & Istoric (Draghici / Claudiu)":
       df_ent = df_ent.sort_values(by=["An", "Luna_Numar"])
       df_ent["Perioada"] = df_ent["Luna"] + " " + df_ent.An.astype(str)
 
-      # Pregatim datele exact ca o tabela unde coloanele sunt indicatorii
-      df_grafic_natif = df_ent.set_index("Perioada")[
+      # Pregatire date pentru ca st.bar_chart sa puna indicatorii in picioare (pe coloane separate)
+      df_grafic_bare = df_ent.set_index("Perioada")[
           ["Vanzari", "Profit Net", "Publicitate"]
       ]
 
       st.markdown(
-          f"**1. Comparatie Valori (Lei) - Bare una langa alta pentru"
+          f"**1. Comparatie Valori Totale in Picioare (Lei) pentru"
           f" {entitate_grafic}**"
       )
-      st.bar_chart(df_grafic_natif)
+      st.bar_chart(df_grafic_bare)
 
       st.markdown(f"**2. Evolutia Marjei Nete (%) pentru {entitate_grafic}**")
       st.bar_chart(df_ent.set_index("Perioada")[["Marja Neta (%)"]])
