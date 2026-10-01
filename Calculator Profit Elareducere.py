@@ -1,3 +1,5 @@
+import gspread
+from oauth2client.service_account import ServiceAccountCredentials
 import pandas as pd
 import streamlit as st
 
@@ -10,19 +12,65 @@ if parola_introdusa != "Draghici1!":
 
 st.title("Calcul Rapid - Elareducere")
 
-# --- INITIALIZARE ISTORIC GLOBAL IN SESSION STATE ---
+
+# --- CONEXIUNEA LA GOOGLE SHEETS ---
+@st.cache_resource
+def init_connection():
+  scope = [
+      "https://spreadsheets.google.com/feeds",
+      "https://www.googleapis.com/auth/drive",
+  ]
+  creds_dict = dict(st.secrets["gcp_service_account"])
+  creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
+  client = gspread.authorize(creds)
+  sheet = client.open("Baza_Date_Elareducere").sheet1
+  return sheet
+
+
+def incarca_date_din_sheet():
+  try:
+    sheet = init_connection()
+    data = sheet.get_all_records()
+    df = pd.DataFrame(data)
+    if df.empty:
+      df = pd.DataFrame(
+          columns=[
+              "Entitate",
+              "An",
+              "Luna",
+              "Vanzari",
+              "Publicitate",
+              "Profit Net",
+              "Marja Neta (%)",
+          ]
+      )
+    return df
+  except Exception as e:
+    return pd.DataFrame(
+        columns=[
+            "Entitate",
+            "An",
+            "Luna",
+            "Vanzari",
+            "Publicitate",
+            "Profit Net",
+            "Marja Neta (%)",
+        ]
+    )
+
+
+def salveaza_in_sheet(df):
+  try:
+    sheet = init_connection()
+    sheet.clear()
+    sheet.update([df.columns.values.tolist()] + df.values.tolist())
+  except Exception as e:
+    st.error(f"Erore la salvarea în Google Sheets: {e}")
+
+
+# --- INCARCARE INITIALA IN SESIUNE ---
 if "istoric" not in st.session_state:
-  st.session_state.istoric = pd.DataFrame(
-      columns=[
-          "Entitate",
-          "An",
-          "Luna",
-          "Vanzari",
-          "Publicitate",
-          "Profit Net",
-          "Marja Neta (%)",
-      ]
-  )
+  st.session_state.istoric = incarca_date_din_sheet()
 
 # Ordinea lunilor pentru sortare cronologica corecta
 ordinea_luni = {
@@ -39,6 +87,7 @@ ordinea_luni = {
     "Noiembrie": 11,
     "Decembrie": 12,
 }
+
 
 # --- PANOU LATERAL: RAPORT LA ZI (GLOBAL + DEFALCAT) ---
 st.sidebar.header("📊 Indicatori la Zi")
@@ -188,8 +237,13 @@ elif meniu == "Jurnal Lunar & Istoric (Draghici / Claudiu)":
       st.session_state.istoric = pd.concat(
           [st.session_state.istoric, noua_inregistrare], ignore_index=True
       )
+
+      # Sincronizare cu Google Sheets la salvare
+      salveaza_in_sheet(st.session_state.istoric)
+
       st.success(
-          f"Datele pentru {entitate} ({luna} {an}) au fost salvate cu succes!"
+          f"Datele pentru {entitate} ({luna} {an}) au fost salvate și"
+          " sincronizate cu succes!"
       )
 
   st.divider()
@@ -258,7 +312,11 @@ elif meniu == "Jurnal Lunar & Istoric (Draghici / Claudiu)":
           st.session_state.istoric = (
               st.session_state.istoric.drop(idx).reset_index(drop=True)
           )
-          st.success("Inregistrarea a fost stearsa!")
+
+          # Sincronizare cu Google Sheets la stergere
+          salveaza_in_sheet(st.session_state.istoric)
+
+          st.success("Inregistrarea a fost stearsa și sincronizată!")
           st.rerun()
 
     # --- GRAFICE INTUITIVE PE ENTITATI ---
@@ -294,4 +352,4 @@ elif meniu == "Jurnal Lunar & Istoric (Draghici / Claudiu)":
     else:
       st.info("Nu exista date inregistrate pentru aceasta entitate.")
   else:
-    st.info("Inca nu ai salvat nicio inregistrare in jurnal.")
+    st.info("Inca nu ai salvat nicio inregistrare în jurnal.")
