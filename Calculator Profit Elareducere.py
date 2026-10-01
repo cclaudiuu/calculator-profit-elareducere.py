@@ -8,7 +8,7 @@ if parola_introdusa != "Draghici1!":
   st.warning("Introdu parola pentru a vedea calculatorul.")
   st.stop()
 
-st.title("Manager Financiar - Elareducere")
+st.title("Calcul Rapid - Elareducere")
 
 # --- INITIALIZARE ISTORIC GLOBAL IN SESSION STATE ---
 if "istoric" not in st.session_state:
