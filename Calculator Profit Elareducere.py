@@ -261,9 +261,9 @@ elif meniu == "Jurnal Lunar & Istoric (Draghici / Claudiu)":
           st.success("Inregistrarea a fost stearsa!")
           st.rerun()
 
-    # --- GRAFICE INTUITIVE PE ENTITATI ---
+    # --- GRAFICE INTUITIVE CU BARE IN PICIORE (VERTICALE) ---
     st.divider()
-    st.subheader("📈 Evolutia financiara in timp")
+    st.subheader("📈 Evolutia financiara in timp (Bare verticale)")
 
     col_g1, col_g2 = st.columns(2)
     with col_g1:
@@ -280,17 +280,19 @@ elif meniu == "Jurnal Lunar & Istoric (Draghici / Claudiu)":
       df_ent = df_ent.sort_values(by=["An", "Luna_Numar"])
       df_ent["Perioada"] = df_ent["Luna"] + " " + df_ent.An.astype(str)
 
+      # Pregatire date pentru ca st.bar_chart sa puna indicatorii in picioare (pe coloane separate)
+      df_grafic_bare = df_ent.set_index("Perioada")[
+          ["Vanzari", "Profit Net", "Publicitate"]
+      ]
+
       st.markdown(
-          f"**1. Comparatie Valori Totale (Lei) pentru {entitate_grafic}**"
+          f"**1. Comparatie Valori Totale in Picioare (Lei) pentru"
+          f" {entitate_grafic}**"
       )
-      st.bar_chart(
-          df_ent.set_index("Perioada")[
-              ["Vanzari", "Profit Net", "Publicitate"]
-          ]
-      )
+      st.bar_chart(df_grafic_bare)
 
       st.markdown(f"**2. Evolutia Marjei Nete (%) pentru {entitate_grafic}**")
-      st.line_chart(df_ent.set_index("Perioada")[["Marja Neta (%)"]])
+      st.bar_chart(df_ent.set_index("Perioada")[["Marja Neta (%)"]])
     else:
       st.info("Nu exista date inregistrate pentru aceasta entitate.")
   else:
