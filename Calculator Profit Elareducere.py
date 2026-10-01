@@ -193,10 +193,10 @@ elif meniu == "Jurnal Lunar & Istoric (Draghici / Claudiu)":
             f" {an_select}):"
         )
         m1, m2, m3, m4 = st.columns(4)
-        m1.metric("Vânzări", f"{r['Vanzari']} lei")
+        m1.metric("Vanzari", f"{r['Vanzari']} lei")
         m2.metric("Publicitate", f"{r['Publicitate']} lei")
         m3.metric("Profit Net", f"{r['Profit Net']} lei")
-        m4.metric("Marjă Netă", f"{r['Marja Neta (%)']}%")
+        m4.metric("Marja Neta", f"{r['Marja Neta (%)']}%")
 
     # --- STERGERE INREGISTRARE ---
     with st.expander("Optiuni de stergere inregistrare gresita"):
@@ -206,15 +206,15 @@ elif meniu == "Jurnal Lunar & Istoric (Draghici / Claudiu)":
           for row in st.session_state.istoric.itertuples()
       ]
       selectie_de_sters = st.selectbox(
-          "Alege rândul de șters:", ["Niciuna"] + optiuni_stergere
+          "Alege randul de sters:", ["Niciuna"] + optiuni_stergere
       )
       if selectie_de_sters != "Niciuna":
-        if st.button("Șterge rândul selectat"):
+        if st.button("Sterge randul selectat"):
           idx = int(selectie_de_sters.split(":")[0])
           st.session_state.istoric = (
               st.session_state.istoric.drop(idx).reset_index(drop=True)
           )
-          st.success("Înregistrarea a fost stearsa! Reincarca pagina.")
+          st.success("Inregistrarea a fost stearsa! Reincarca pagina.")
           st.rerun()
 
     # --- GRAFICE CU BASTONASE (BAR CHART INTERACTIV) ---
@@ -234,14 +234,14 @@ elif meniu == "Jurnal Lunar & Istoric (Draghici / Claudiu)":
       df_ent = df_ent.sort_values(by=["An", "Luna_Numar"])
       df_ent["Perioada"] = df_ent["Luna"] + " " + df_ent.An.astype(str)
 
-      # Grafic 1: Bastonase pentru Vanzari, Profit Net si Publicitate
+      # Grafic 1: Bastonase pentru Vanzari, Profit Net si Publicitate (corectat)
       fig_val = px.bar(
           df_ent,
           x="Perioada",
           y=["Vanzari", "Profit Net", "Publicitate"],
           barmode="group",
           title=f"Evolutie Valori Financiare (Lei) - {entitate_grafic}",
-          labels={"value": "Valoare (Lei)", "variable", "Indicator"},
+          labels={"value": "Valoare (Lei)", "variable": "Indicator"},
       )
       st.plotly_chart(fig_val, use_container_width=True)
 
@@ -258,6 +258,6 @@ elif meniu == "Jurnal Lunar & Istoric (Draghici / Claudiu)":
       fig_marja.update_traces(texttemplate="%{text}%", textposition="outside")
       st.plotly_chart(fig_marja, use_container_width=True)
     else:
-      st.info("Nu există date înregistrate pentru această entitate.")
+      st.info("Nu exista date inregistrate pentru aceasta entitate.")
   else:
-    st.info("Încă nu ai salvat nicio înregistrare în jurnal.")
+    st.info("Inca nu ai salvat nicio inregistrare in jurnal.")
