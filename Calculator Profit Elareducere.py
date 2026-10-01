@@ -1,6 +1,5 @@
-import streamlit as st
-import requests
 import pandas as pd
+import streamlit as st
 
 # --- SECURITATE ---
 parola_introdusa = st.text_input("Introdu parola de acces:", type="password")
@@ -9,37 +8,39 @@ if parola_introdusa != "Draghici1!":
     st.warning("Introdu parola pentru a vedea calculatorul.")
     st.stop()
 
-st.title("Calcul Rapid - Elareducere")
+st.title("Calcul Rapid - Elareducere (Synology NAS)")
 
-# URL-ul Web App generat din Google Apps Script
-# URL-ul Web App actualizat (Versiunea 7)
-WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxVkvB6wrtCIJTE6477mS9JpDz6Vb2PVIgj0mW2BUXyIBJmAYdyET3-8Bdya1nWzbeZBg/exec"
-# --- CONEXIUNEA PRIN GOOGLE APPS SCRIPT ---
-def incarca_date_din_sheet():
+# Calea catre fisierul Excel aflat in folderul Synology Drive pe calculatorul tau
+EXCEL_PATH = r"C:\Users\claudiu\SynologyDrive\Baza_Date_Elareducere.xlsx"
+
+
+# --- CONEXIUNEA CU SYNOLOGY DRIVE / NAS ---
+@st.cache_data(ttl=5)
+def incarca_date_din_nas():
     try:
-        response = requests.get(WEB_APP_URL)
-        data = response.json()
-        if not data or len(data) <= 1:
-            return pd.DataFrame(
-                columns=[
-                    "Entitate",
-                    "An",
-                    "Luna",
-                    "Vanzari",
-                    "Publicitate",
-                    "Profit Net",
-                    "Marja Neta (%)",
-                ]
-            )
-        # Prima linie este header-ul, restul sunt datele
-        df = pd.DataFrame(data[1:], columns=data[0])
+        df = pd.read_excel(EXCEL_PATH)
+        # Ne asiguram ca avem coloanele de baza daca fisierul e gol
+        coloane_necesare = [
+            "Entitate",
+            "An",
+            "Luna",
+            "Vanzari",
+            "Publicitate",
+            "Profit Net",
+            "Marja Neta (%)",
+        ]
+        for col in coloane_necesare:
+            if col not in df.columns:
+                df[col] = 0
+
         # Convertim tipurile de date numerice unde este cazul
         for col in ["An", "Vanzari", "Publicitate", "Profit Net", "Marja Neta (%)"]:
             if col in df.columns:
-                df[col] = pd.to_numeric(df[col], errors="ignore")
+                df[col] = pd.to_numeric(df[col], errors="coerce")
+
         return df
     except Exception as e:
-        st.error(f"Erore la incarcarea datelor: {e}")
+        st.error(f"Erore la citirea fisierului de pe NAS: {e}")
         return pd.DataFrame(
             columns=[
                 "Entitate",
@@ -53,27 +54,30 @@ def incarca_date_din_sheet():
         )
 
 
-def salveaza_in_sheet(df):
+def salveaza_in_nas(df):
     try:
-        # Trimitem tot tabelul sub forma de matrice catre Apps Script
-        payload = [df.columns.values.tolist()] + df.values.tolist()
-        
-        # Adaugam allow_redirects=True pentru siguranta cererilor POST
-        response = requests.post(WEB_APP_URL, json=payload, allow_redirects=True)
-        
-        # Afisam pe ecran ce raspuns exact primim de la Google
-        st.write(f"🔍 Status HTTP: {response.status_code}")
-        st.write(f"🔍 Raspuns Apps Script: {response.text}")
-        
-        if response.status_code == 200:
-            st.success("Datele au fost salvate și sincronizate în Google Sheets!")
-        else:
-            st.error(f"Erore la salvarea în Google Sheets. Cod: {response.status_code}")
+        df.to_excel(EXCEL_PATH, index=False)
+        st.success(
+            "Datele au fost salvate cu succes! Synology le va sincroniza automat pe NAS."
+        )
     except Exception as e:
-        st.error(f"Erore de comunicare: {e}")
+        st.error(f"Erore la salvarea pe NAS: {e}")
+
+
 # --- INCARCARE INITIALA IN SESIUNE ---
 if "istoric" not in st.session_state:
-    st.session_state.istoric = incarca_date_din_sheet()
+    st.session_state.istoric = incarca_date_din_nas()
+
+# --- INTERFATA DE EDITARE ---
+st.subheader("Tabelul financiar")
+
+df_editat = st.data_editor(
+    st.session_state.istoric, num_rows="dynamic", use_container_width=True
+)
+
+if st.button("Salveaza modificarile"):
+    st.session_state.istoric = df_editat
+    salveaza_in_nas(df_editat)
 
 # Ordinea lunilor pentru sortare cronologica corecta
 ordinea_luni = {
@@ -98,7 +102,6 @@ st.sidebar.header("📊 Indicatori la Zi")
 if not st.session_state.istoric.empty:
     df_hist = st.session_state.istoric
 
-    # 1. TOTAL GENERAL
     t_vanzari = df_hist["Vanzari"].sum()
     t_pub = df_hist["Publicitate"].sum()
     t_profit = df_hist["Profit Net"].sum()
@@ -111,7 +114,6 @@ if not st.session_state.istoric.empty:
 
     st.sidebar.divider()
 
-    # 2. DEFALCARE PE ENTITATI (DRAGHICI / CLAUDIU)
     st.sidebar.subheader("👥 Defalcare Entitati")
 
     for ent in ["Draghici", "Claudiu"]:
@@ -123,15 +125,12 @@ if not st.session_state.istoric.empty:
 
             st.sidebar.markdown(f"**🔹 {ent}**")
             st.sidebar.text(
-                f" • Vanzari: {v_ent:,.2f} lei\n • Profit: {p_ent:,.2f}"
-                f" lei\n • Marja: {m_ent:.1f}%"
+                f" • Vanzari: {v_ent:,.2f} lei\n • Profit: {p_ent:,.2f} lei\n • Marja: {m_ent:.1f}%"
             )
         else:
             st.sidebar.markdown(f"**🔹 {ent}**: Fără date")
 else:
-    st.sidebar.info(
-        "Nicio data inregistrata momentan pentru rapoartele la zi."
-    )
+    st.sidebar.info("Nicio data inregistrata momentan pentru rapoartele la zi.")
 
 st.sidebar.divider()
 
@@ -161,12 +160,8 @@ if meniu == "Simulator Rapid":
 
     cost_marfa = vanzari_lunare / 2.1
     comision_platforma = vanzari_lunare * 0.254
-    profit_net = (
-        vanzari_lunare - (cost_marfa + comision_platforma + buget_reclama_lunar)
-    )
-    marja_neta = (
-        (profit_net / vanzari_lunare) * 100 if vanzari_lunare > 0 else 0
-    )
+    profit_net = vanzari_lunare - (cost_marfa + comision_platforma + buget_reclama_lunar)
+    marja_neta = (profit_net / vanzari_lunare) * 100 if vanzari_lunare > 0 else 0
 
     col_m1, col_m2 = st.columns(2)
     with col_m1:
@@ -241,12 +236,11 @@ elif meniu == "Jurnal Lunar & Istoric (Draghici / Claudiu)":
                 [st.session_state.istoric, noua_inregistrare], ignore_index=True
             )
 
-            # Sincronizare cu Google Sheets la salvare
-            salveaza_in_sheet(st.session_state.istoric)
+            # Sincronizare cu NAS la salvare
+            salveaza_in_nas(st.session_state.istoric)
 
             st.success(
-                f"Datele pentru {entitate} ({luna} {an}) au fost salvate și"
-                " sincronizate cu succes!"
+                f"Datele pentru {entitate} ({luna} {an}) au fost salvate și sincronizate cu succes!"
             )
 
     st.divider()
@@ -302,8 +296,7 @@ elif meniu == "Jurnal Lunar & Istoric (Draghici / Claudiu)":
         # --- STERGERE INREGISTRARE ---
         with st.expander("⚙️ Optiuni de stergere inregistrare gresita"):
             optiuni_stergere = [
-                f"{row.Index}: {row.Entitate} - {row.Luna} {row.An} (Vanzari:"
-                f" {row.Vanzari} lei)"
+                f"{row.Index}: {row.Entitate} - {row.Luna} {row.An} (Vanzari: {row.Vanzari} lei)"
                 for row in st.session_state.istoric.itertuples()
             ]
             selectie_de_sters = st.selectbox(
@@ -316,8 +309,8 @@ elif meniu == "Jurnal Lunar & Istoric (Draghici / Claudiu)":
                         st.session_state.istoric.drop(idx).reset_index(drop=True)
                     )
 
-                    # Sincronizare cu Google Sheets la stergere
-                    salveaza_in_sheet(st.session_state.istoric)
+                    # Sincronizare cu NAS la stergere
+                    salveaza_in_nas(st.session_state.istoric)
 
                     st.success("Inregistrarea a fost stearsa și sincronizată!")
                     st.rerun()
