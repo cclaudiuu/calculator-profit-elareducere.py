@@ -17,48 +17,35 @@ EXCEL_PATH = r"C:\Users\claudiu\SynologyDrive\Baza_Date_Elareducere.xlsx"
 # --- CONEXIUNEA CU SYNOLOGY DRIVE / NAS ---
 @st.cache_data(ttl=5)
 def incarca_date_din_nas():
-  coloane_necesare = [
-      "Entitate",
-      "An",
-      "Luna",
-      "Vanzari",
-      "Publicitate",
-      "Profit Net",
-      "Marja Neta (%)",
-  ]
-  try:
-    df = pd.read_excel(EXCEL_PATH)
-  except Exception:
-    # Dacă fișierul nu există sau apare o eroare de citire, creăm un DataFrame gol
-    df = pd.DataFrame(columns=coloane_necesare)
+    coloane_necesare = [
+        "Entitate",
+        "An",
+        "Luna",
+        "Vanzari",
+        "Publicitate",
+        "Profit Net",
+        "Marja Neta (%)",
+    ]
     try:
-      # Încercăm să salvăm fișierul gol pe disc pentru data viitoare
-      df.to_excel(EXCEL_PATH, index=False)
+        df = pd.read_excel(EXCEL_PATH)
     except Exception:
-      pass  # Dacă nici scrierea nu e permisă (ex: director inexistent), rulăm doar în memorie
+        # Dacă fișierul nu există sau nu poate fi citit, creăm un DataFrame gol
+        df = pd.DataFrame(columns=coloane_necesare)
+        try:
+            # Încercăm să creăm/salvăm fișierul gol pe disc pentru prima utilizare
+            df.to_excel(EXCEL_PATH, index=False)
+        except Exception:
+            pass  # Dacă directorul nu există sau nu sunt permisiuni, continuăm în memorie
 
-  for col in coloane_necesare:
-    if col not in df.columns:
-      df[col] = 0
+    for col in coloane_necesare:
+        if col not in df.columns:
+            df[col] = 0
 
-  for col in ["An", "Vanzari", "Publicitate", "Profit Net", "Marja Neta (%)"]:
-    if col in df.columns:
-      df[col] = pd.to_numeric(df[col], errors="coerce")
+    for col in ["An", "Vanzari", "Publicitate", "Profit Net", "Marja Neta (%)"]:
+        if col in df.columns:
+            df[col] = pd.to_numeric(df[col], errors="coerce")
 
-  return df
-    except Exception as e:
-        st.error(f"Erore la citirea fisierului de pe NAS: {e}")
-        return pd.DataFrame(
-            columns=[
-                "Entitate",
-                "An",
-                "Luna",
-                "Vanzari",
-                "Publicitate",
-                "Profit Net",
-                "Marja Neta (%)",
-            ]
-        )
+    return df
 
 
 def salveaza_in_nas(df):
