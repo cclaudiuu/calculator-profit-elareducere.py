@@ -40,22 +40,46 @@ ordinea_luni = {
     "Decembrie": 12,
 }
 
-# --- PANOU LATERAL: RAPORT LA ZI (GLOBAL) ---
-st.sidebar.header("📊 Indicatori la Zi (Total)")
-if not st.session_state.istoric.empty:
-  total_vanzari = st.session_state.istoric["Vanzari"].sum()
-  total_publicitate = st.session_state.istoric["Publicitate"].sum()
-  total_profit = st.session_state.istoric["Profit Net"].sum()
-  marja_medie = (
-      (total_profit / total_vanzari) * 100 if total_vanzari > 0 else 0
-  )
+# --- PANOU LATERAL: RAPORT LA ZI (GLOBAL + DEFALCAT) ---
+st.sidebar.header("📊 Indicatori la Zi")
 
-  st.sidebar.metric("Total Vanzari Acumulate", f"{total_vanzari:,.2f} lei")
-  st.sidebar.metric("Total Publicitate", f"{total_publicitate:,.2f} lei")
-  st.sidebar.metric("Total Profit Net", f"{total_profit:,.2f} lei")
-  st.sidebar.metric("Marja Neta Medie", f"{marja_medie:.1f}%")
+if not st.session_state.istoric.empty:
+  df_hist = st.session_state.istoric
+
+  # 1. TOTAL GENERAL
+  t_vanzari = df_hist["Vanzari"].sum()
+  t_pub = df_hist["Publicitate"].sum()
+  t_profit = df_hist["Profit Net"].sum()
+  t_marja = (t_profit / t_vanzari) * 100 if t_vanzari > 0 else 0
+
+  st.sidebar.subheader("🌟 Total General")
+  st.sidebar.metric("Vanzari Acumulate", f"{t_vanzari:,.2f} lei")
+  st.sidebar.metric("Profit Net Total", f"{t_profit:,.2f} lei")
+  st.sidebar.metric("Marja Medie", f"{t_marja:.1f}%")
+
+  st.sidebar.divider()
+
+  # 2. DEFALCARE PE ENTITATI (DRAGHICI / CLAUDIU)
+  st.sidebar.subheader("👥 Defalcare Entitati")
+
+  for ent in ["Draghici", "Claudiu"]:
+    df_ent_sub = df_hist[df_hist["Entitate"] == ent]
+    if not df_ent_sub.empty:
+      v_ent = df_ent_sub["Vanzari"].sum()
+      p_ent = df_ent_sub["Profit Net"].sum()
+      m_ent = (p_ent / v_ent) * 100 if v_ent > 0 else 0
+
+      st.sidebar.markdown(f"**🔹 {ent}**")
+      st.sidebar.text(
+          f" • Vanzari: {v_ent:,.2f} lei\n • Profit: {p_ent:,.2f}"
+          f" lei\n • Marja: {m_ent:.1f}%"
+      )
+    else:
+      st.sidebar.markdown(f"**🔹 {ent}**: Fără date")
 else:
-  st.sidebar.info("Nicio data inregistrata momentan pentru rapoartele la zi.")
+  st.sidebar.info(
+      "Nicio data inregistrata momentan pentru rapoartele la zi."
+  )
 
 st.sidebar.divider()
 
