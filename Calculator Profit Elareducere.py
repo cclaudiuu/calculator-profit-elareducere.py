@@ -94,15 +94,15 @@ if meniu == "Simulator Rapid":
 
   vanzari_lunare = st.slider(
       "Valoare vanzari fara transport (lei)",
-      min_value=0,
-      max_value=15000,
+      min_value=1000,
+      max_value=50000,
       value=5000,
       step=50,
   )
   buget_reclama_lunar = st.slider(
       "Publicitate lunara (lei)",
-      min_value=0,
-      max_value=2000,
+      min_value=100,
+      max_value=5000,
       value=1500,
       step=50,
   )
@@ -123,7 +123,7 @@ if meniu == "Simulator Rapid":
     st.metric(label="Marja Neta", value=f"{marja_neta:.1f}%")
 
   date_grafic = []
-  for v in range(0, 15001, 500):
+  for v in range(0, 50001, 500):
     p = v - (v / 2.1) - (v * 0.254) - buget_reclama_lunar
     date_grafic.append({"Vanzari": v, "Profit Net": p})
 
