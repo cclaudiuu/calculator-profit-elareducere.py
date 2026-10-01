@@ -1,5 +1,5 @@
 import gspread
-from oauth2client.service_account import ServiceAccountCredentials
+from google.oauth2.service_account import Credentials
 import pandas as pd
 import streamlit as st
 
@@ -7,66 +7,81 @@ import streamlit as st
 parola_introdusa = st.text_input("Introdu parola de acces:", type="password")
 
 if parola_introdusa != "Draghici1!":
-  st.warning("Introdu parola pentru a vedea calculatorul.")
-  st.stop()
+    st.warning("Introdu parola pentru a vedea calculatorul.")
+    st.stop()
 
 st.title("Calcul Rapid - Elareducere")
 
 
-# --- CONEXIUNEA LA GOOGLE SHEETS ---
+# --- CONEXIUNEA LA GOOGLE SHEETS (MODERNĂ FĂRĂ JSON PRIVAT) ---
 @st.cache_resource
 def init_connection():
-  scope = [
-      "https://spreadsheets.google.com/feeds",
-      "https://www.googleapis.com/auth/drive",
-  ]
-  creds_dict = dict(st.secrets["gcp_service_account"])
-  creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
-  client = gspread.authorize(creds)
-  sheet = client.open("Baza_Date_Elareducere").sheet1
-  return sheet
+    scope = [
+        "https://www.googleapis.com/auth/spreadsheets",
+        "https://www.googleapis.com/auth/drive",
+    ]
+    
+    # Preluam datele din st.secrets si construim dict-ul de credentiale compatibil
+    sec = st.secrets["gcp_service_account"]
+    creds_dict = {
+        "type": "service_account",
+        "project_id": sec["project_id"],
+        "private_key_id": sec.get("private_key_id", ""),
+        "private_key": sec.get("private_key", ""),
+        "client_email": sec["client_email"],
+        "client_id": sec["client_id"],
+        "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+        "token_uri": "https://oauth2.googleapis.com/token",
+        "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+        "client_x509_cert_url": f"https://www.googleapis.com/robot/v1/metadata/x509/{sec['client_email'].replace('@', '%40')}"
+    }
+    
+    creds = Credentials.from_service_account_info(creds_dict, scopes=scope)
+    client = gspread.authorize(creds)
+    sheet = client.open("Baza_Date_Elareducere").sheet1
+    return sheet
 
 
 def incarca_date_din_sheet():
-  try:
-    sheet = init_connection()
-    data = sheet.get_all_records()
-    df = pd.DataFrame(data)
-    if df.empty:
-      df = pd.DataFrame(
-          columns=[
-              "Entitate",
-              "An",
-              "Luna",
-              "Vanzari",
-              "Publicitate",
-              "Profit Net",
-              "Marja Neta (%)",
-          ]
-      )
-    return df
-  except Exception as e:
-    return pd.DataFrame(
-        columns=[
-            "Entitate",
-            "An",
-            "Luna",
-            "Vanzari",
-            "Publicitate",
-            "Profit Net",
-            "Marja Neta (%)",
-        ]
-    )
+    try:
+        sheet = init_connection()
+        data = sheet.get_all_records()
+        df = pd.DataFrame(data)
+        if df.empty:
+            df = pd.DataFrame(
+                columns=[
+                    "Entitate",
+                    "An",
+                    "Luna",
+                    "Vanzari",
+                    "Publicitate",
+                    "Profit Net",
+                    "Marja Neta (%)",
+                ]
+            )
+        return df
+    except Exception as e:
+        st.error(f"Erore la incarcarea datelor: {e}")
+        return pd.DataFrame(
+            columns=[
+                "Entitate",
+                "An",
+                "Luna",
+                "Vanzari",
+                "Publicitate",
+                "Profit Net",
+                "Marja Neta (%)",
+            ]
+        )
 
 
 def salveaza_in_sheet(df):
-  try:
-    sheet = init_connection()
-    sheet.clear()
-    sheet.update([df.columns.values.tolist()] + df.values.tolist())
-  except Exception as e:
-    st.error(f"Erore la salvarea în Google Sheets: {e}")
-
+    try:
+        sheet = init_connection()
+        sheet.clear()
+        sheet.update([df.columns.values.tolist()] + df.values.tolist())
+    except Exception as e:
+        st.error(f"Erore la salvarea în Google Sheets: {e}")
 
 # --- INCARCARE INITIALA IN SESIUNE ---
 if "istoric" not in st.session_state:
