@@ -17,28 +17,35 @@ EXCEL_PATH = r"C:\Users\claudiu\SynologyDrive\Baza_Date_Elareducere.xlsx"
 # --- CONEXIUNEA CU SYNOLOGY DRIVE / NAS ---
 @st.cache_data(ttl=5)
 def incarca_date_din_nas():
+  coloane_necesare = [
+      "Entitate",
+      "An",
+      "Luna",
+      "Vanzari",
+      "Publicitate",
+      "Profit Net",
+      "Marja Neta (%)",
+  ]
+  try:
+    df = pd.read_excel(EXCEL_PATH)
+  except Exception:
+    # Dacă fișierul nu există sau apare o eroare de citire, creăm un DataFrame gol
+    df = pd.DataFrame(columns=coloane_necesare)
     try:
-        df = pd.read_excel(EXCEL_PATH)
-        # Ne asiguram ca avem coloanele de baza daca fisierul e gol
-        coloane_necesare = [
-            "Entitate",
-            "An",
-            "Luna",
-            "Vanzari",
-            "Publicitate",
-            "Profit Net",
-            "Marja Neta (%)",
-        ]
-        for col in coloane_necesare:
-            if col not in df.columns:
-                df[col] = 0
+      # Încercăm să salvăm fișierul gol pe disc pentru data viitoare
+      df.to_excel(EXCEL_PATH, index=False)
+    except Exception:
+      pass  # Dacă nici scrierea nu e permisă (ex: director inexistent), rulăm doar în memorie
 
-        # Convertim tipurile de date numerice unde este cazul
-        for col in ["An", "Vanzari", "Publicitate", "Profit Net", "Marja Neta (%)"]:
-            if col in df.columns:
-                df[col] = pd.to_numeric(df[col], errors="coerce")
+  for col in coloane_necesare:
+    if col not in df.columns:
+      df[col] = 0
 
-        return df
+  for col in ["An", "Vanzari", "Publicitate", "Profit Net", "Marja Neta (%)"]:
+    if col in df.columns:
+      df[col] = pd.to_numeric(df[col], errors="coerce")
+
+  return df
     except Exception as e:
         st.error(f"Erore la citirea fisierului de pe NAS: {e}")
         return pd.DataFrame(
