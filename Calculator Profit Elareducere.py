@@ -15,6 +15,22 @@ meniu = st.sidebar.radio(
     "Navigare", ["Simulator Rapid", "Jurnal Lunar & Istoric (Draghici / Claudiu)"]
 )
 
+# Ordinea lunilor pentru sortare corecta in grafice
+ordinea_luni = {
+    "Ianuarie": 1,
+    "Februarie": 2,
+    "Martie": 3,
+    "Aprilie": 4,
+    "Mai": 5,
+    "Iunie": 6,
+    "Iulie": 7,
+    "August": 8,
+    "Septembrie": 9,
+    "Octombrie": 10,
+    "Noiembrie": 11,
+    "Decembrie": 12,
+}
+
 # --- 1. SIMULATORUL RAPID (Varianta ta clasică) ---
 if meniu == "Simulator Rapid":
   st.subheader("Simulator Rapid (Slidere)")
@@ -116,7 +132,6 @@ elif meniu == "Jurnal Lunar & Istoric (Draghici / Claudiu)":
       p_net = v_real - (c_marfa + c_plat + p_real)
       m_neta = (p_net / v_real) * 100 if v_real > 0 else 0
 
-      # Adaugam in tabelul de istoric
       noua_inregistrare = pd.DataFrame({
           "Entitate": [entitate],
           "An": [an],
@@ -134,42 +149,72 @@ elif meniu == "Jurnal Lunar & Istoric (Draghici / Claudiu)":
           f"Datele pentru {entitate} ({luna} {an}) au fost salvate cu succes!"
       )
 
-  # Afisare Istoric si Grafice
+  # --- GESTIONARE SI STERGERE INREGISTRARI ---
   st.divider()
-  st.subheader("Istoric Inregistrari")
-  if not st.session_state.istoric.empty:
-    st.dataframe(st.session_state.istoric)
+  st.subheader("Istoric Inregistrari (Gestionare)")
 
-    # Filtrare dupa entitate pentru grafice comparative
+  if not st.session_state.istoric.empty:
+    # Afisam tabelul complet
+    st.dataframe(st.session_state.istoric, use_container_width=True)
+
+    # Optiune de stergere a unei inregistrari gresite
+    st.markdown("### Sterge o inregistrare gresita")
+    optiuni_stergere = [
+        f"{row.Index}: {row.Entitate} - {row.Luna} {row.An} (Vanzari: {row.Vanzari} lei)"
+        for row in st.session_state.istoric.itertuples()
+    ]
+
+    selectie_de_sters = st.selectbox(
+        "Alege inregistrarea pe care doresti o stergi:", ["Niciuna"] + optiuni_stergere
+    )
+
+    if selectie_de_sters != "Niciuna":
+      if st.button("Sterge randul selectat"):
+        index_de_sters = int(selectie_de_sters.split(":")[0])
+        st.session_state.istoric = (
+            st.session_state.istoric.drop(index_de_sters)
+            .reset_index(drop=True)
+        )
+        st.success("Înregistrarea a fost ștersă cu succes! Reîncarcă pagina.")
+        st.rerun()
+
+    # --- GRAFICE DE EVOLUTIE ---
+    st.divider()
     entitate_selectata = st.selectbox(
         "Alege entitatea pentru graficul de evolutie", ["Draghici", "Claudiu"]
     )
     df_entitate = st.session_state.istoric[
         st.session_state.istoric["Entitate"] == entitate_selectata
-    ]
+    ].copy()
 
     if not df_entitate.empty:
       st.markdown(
           f"### Evolutie in timp pentru: **{entitate_selectata}**"
       )
-      # Creare eticheta combinata Luna-An pentru grafic
+
+      # Sortam corect cronologic dupa an si luna
+      df_entitate["Luna_Numar"] = df_entitate["Luna"].map(ordinea_luni)
+      df_entitate = df_entitate.sort_values(by=["An", "Luna_Numar"])
+
       df_entitate["Perioada"] = (
           df_entitate["Luna"] + " " + df_entitate["An"].astype(str)
       )
 
-      # Grafic pentru Vanzari si Profit Net
-      st.subheader("Evolutie Vanzari vs Profit Net (lei)")
+      # Grafic Vanzari vs Profit Net
+      st.subheader("Evolutie Vanzari vs Profit Net vs Publicitate (lei)")
       st.line_chart(
-          df_entitate.set_index("Perioada")[["Vanzari", "Profit Net"]]
+          df_entitate.set_index("Perioada")[
+              ["Vanzari", "Profit Net", "Publicitate"]
+          ]
       )
 
-      # Grafic separat pentru Marja Neta
+      # Grafic Marja Neta
       st.subheader("Evolutie Marja Neta (%)")
       st.line_chart(df_entitate.set_index("Perioada")[["Marja Neta (%)"]])
     else:
       st.info(
           "Nu există încă date înregistrate pentru această entitate. Completează"
-          " formularul de mai sus."
+          " formularul de sus."
       )
   else:
     st.info("Încă nu ai salvat nicio înregistrare. Folosește formularul de sus.")
