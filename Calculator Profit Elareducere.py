@@ -57,11 +57,18 @@ def salveaza_in_sheet(df):
     try:
         # Trimitem tot tabelul sub forma de matrice catre Apps Script
         payload = [df.columns.values.tolist()] + df.values.tolist()
-        response = requests.post(WEB_APP_URL, json=payload)
+        
+        # Adaugam allow_redirects=True pentru siguranta cererilor POST
+        response = requests.post(WEB_APP_URL, json=payload, allow_redirects=True)
+        
+        # Afisam pe ecran ce raspuns exact primim de la Google
+        st.write(f"🔍 Status HTTP: {response.status_code}")
+        st.write(f"🔍 Raspuns Apps Script: {response.text}")
+        
         if response.status_code == 200:
             st.success("Datele au fost salvate și sincronizate în Google Sheets!")
         else:
-            st.error("Erore la salvarea în Google Sheets.")
+            st.error(f"Erore la salvarea în Google Sheets. Cod: {response.status_code}")
     except Exception as e:
         st.error(f"Erore de comunicare: {e}")
 # --- INCARCARE INITIALA IN SESIUNE ---
