@@ -8,12 +8,21 @@ if parola_introdusa != "Draghici1!":
   st.warning("Introdu parola pentru a vedea calculatorul.")
   st.stop()
 
-st.title("Calcul rapid - Elareducere")
+st.title("Manager Financiar - Elareducere")
 
-# --- MENIU LATERAL (NAVIGARE) ---
-meniu = st.sidebar.radio(
-    "Navigare", ["Simulator Rapid", "Jurnal Lunar & Istoric (Draghici / Claudiu)"]
-)
+# --- INITIALIZARE ISTORIC GLOBAL IN SESSION STATE ---
+if "istoric" not in st.session_state:
+  st.session_state.istoric = pd.DataFrame(
+      columns=[
+          "Entitate",
+          "An",
+          "Luna",
+          "Vanzari",
+          "Publicitate",
+          "Profit Net",
+          "Marja Neta (%)",
+      ]
+  )
 
 # Ordinea lunilor pentru sortare cronologica corecta
 ordinea_luni = {
@@ -30,6 +39,30 @@ ordinea_luni = {
     "Noiembrie": 11,
     "Decembrie": 12,
 }
+
+# --- PANOU LATERAL: RAPORT LA ZI (GLOBAL) ---
+st.sidebar.header("📊 Indicatori la Zi (Total)")
+if not st.session_state.istoric.empty:
+  total_vanzari = st.session_state.istoric["Vanzari"].sum()
+  total_publicitate = st.session_state.istoric["Publicitate"].sum()
+  total_profit = st.session_state.istoric["Profit Net"].sum()
+  marja_medie = (
+      (total_profit / total_vanzari) * 100 if total_vanzari > 0 else 0
+  )
+
+  st.sidebar.metric("Total Vanzari Acumulate", f"{total_vanzari:,.2f} lei")
+  st.sidebar.metric("Total Publicitate", f"{total_publicitate:,.2f} lei")
+  st.sidebar.metric("Total Profit Net", f"{total_profit:,.2f} lei")
+  st.sidebar.metric("Marja Neta Medie", f"{marja_medie:.1f}%")
+else:
+  st.sidebar.info("Nicio data inregistrata momentan pentru rapoartele la zi.")
+
+st.sidebar.divider()
+
+# --- MENIU LATERAL (NAVIGARE) ---
+meniu = st.sidebar.radio(
+    "Navigare", ["Simulator Rapid", "Jurnal Lunar & Istoric (Draghici / Claudiu)"]
+)
 
 # --- 1. SIMULATORUL RAPID ---
 if meniu == "Simulator Rapid":
@@ -59,8 +92,11 @@ if meniu == "Simulator Rapid":
       (profit_net / vanzari_lunare) * 100 if vanzari_lunare > 0 else 0
   )
 
-  st.metric(label="Profit Net Lunar", value=f"{profit_net:.2f} lei")
-  st.metric(label="Marja Neta", value=f"{marja_neta:.1f}%")
+  col_m1, col_m2 = st.columns(2)
+  with col_m1:
+    st.metric(label="Profit Net Lunar", value=f"{profit_net:.2f} lei")
+  with col_m2:
+    st.metric(label="Marja Neta", value=f"{marja_neta:.1f}%")
 
   date_grafic = []
   for v in range(0, 15001, 500):
@@ -74,19 +110,6 @@ if meniu == "Simulator Rapid":
 # --- 2. JURNAL LUNAR & ISTORIC ---
 elif meniu == "Jurnal Lunar & Istoric (Draghici / Claudiu)":
   st.subheader("Jurnal Financiar pe Luni")
-
-  if "istoric" not in st.session_state:
-    st.session_state.istoric = pd.DataFrame(
-        columns=[
-            "Entitate",
-            "An",
-            "Luna",
-            "Vanzari",
-            "Publicitate",
-            "Profit Net",
-            "Marja Neta (%)",
-        ]
-    )
 
   with st.form("form_inregistrare"):
     col1, col2, col3 = st.columns(3)
@@ -146,13 +169,13 @@ elif meniu == "Jurnal Lunar & Istoric (Draghici / Claudiu)":
       )
 
   st.divider()
-  st.subheader("Istoric & Vizualizare Detaliata")
+  st.subheader("📋 Istoric & Vizualizare Detaliata")
 
   if not st.session_state.istoric.empty:
     st.dataframe(st.session_state.istoric, use_container_width=True)
 
     # --- SELECTIE SPECIFICA LUNA / ENTITATE ---
-    st.markdown("### Vizualizare rapida pe o luna anume")
+    st.markdown("### 🔍 Vizualizare rapida pe o luna anume")
     col_f1, col_f2, col_f3 = st.columns(3)
     with col_f1:
       ent_select = st.selectbox(
@@ -178,7 +201,6 @@ elif meniu == "Jurnal Lunar & Istoric (Draghici / Claudiu)":
           key="f_luna",
       )
 
-    # Afisare date numerice pentru luna selectata
     if luna_select != "Niciuna disponibila":
       rand_luna = st.session_state.istoric[
           (st.session_state.istoric["Entitate"] == ent_select)
@@ -188,8 +210,7 @@ elif meniu == "Jurnal Lunar & Istoric (Draghici / Claudiu)":
       if not rand_luna.empty:
         r = rand_luna.iloc[0]
         st.markdown(
-            f"#### Valori numerice pentru **{ent_select}** ({luna_select}"
-            f" {an_select}):"
+            f"Valori pentru **{ent_select}** ({luna_select} {an_select}):"
         )
         m1, m2, m3, m4 = st.columns(4)
         m1.metric("Vanzari", f"{r['Vanzari']} lei")
@@ -198,7 +219,7 @@ elif meniu == "Jurnal Lunar & Istoric (Draghici / Claudiu)":
         m4.metric("Marja Neta", f"{r['Marja Neta (%)']}%")
 
     # --- STERGERE INREGISTRARE ---
-    with st.expander("Optiuni de stergere inregistrare gresita"):
+    with st.expander("⚙️ Optiuni de stergere inregistrare gresita"):
       optiuni_stergere = [
           f"{row.Index}: {row.Entitate} - {row.Luna} {row.An} (Vanzari:"
           f" {row.Vanzari} lei)"
@@ -213,17 +234,19 @@ elif meniu == "Jurnal Lunar & Istoric (Draghici / Claudiu)":
           st.session_state.istoric = (
               st.session_state.istoric.drop(idx).reset_index(drop=True)
           )
-          st.success("Inregistrarea a fost stearsa! Reincarca pagina.")
+          st.success("Inregistrarea a fost stearsa!")
           st.rerun()
 
-    # --- GRAFICE NATIVE STREAMLIT ---
+    # --- GRAFICE INTUITIVE PE ENTITATI ---
     st.divider()
-    st.subheader("Grafice interactive pe luni")
-    entitate_grafic = st.selectbox(
-        "Alege entitatea pentru graficele comparative",
-        ["Draghici", "Claudiu"],
-        key="g_ent",
-    )
+    st.subheader("📈 Evolutia financiara in timp")
+
+    col_g1, col_g2 = st.columns(2)
+    with col_g1:
+      entitate_grafic = st.selectbox(
+          "Alege entitatea pentru grafice", ["Draghici", "Claudiu"], key="g_ent"
+      )
+
     df_ent = st.session_state.istoric[
         st.session_state.istoric["Entitate"] == entitate_grafic
     ].copy()
@@ -233,15 +256,17 @@ elif meniu == "Jurnal Lunar & Istoric (Draghici / Claudiu)":
       df_ent = df_ent.sort_values(by=["An", "Luna_Numar"])
       df_ent["Perioada"] = df_ent["Luna"] + " " + df_ent.An.astype(str)
 
-      st.markdown("**Evolutie Valori Financiare (Vanzari, Profit Net, Publicitate - Lei)**")
+      st.markdown(
+          f"**1. Comparatie Valori Totale (Lei) pentru {entitate_grafic}**"
+      )
       st.bar_chart(
           df_ent.set_index("Perioada")[
               ["Vanzari", "Profit Net", "Publicitate"]
           ]
       )
 
-      st.markdown("**Evolutie Marja Neta (%)**")
-      st.bar_chart(df_ent.set_index("Perioada")[["Marja Neta (%)"]])
+      st.markdown(f"**2. Evolutia Marjei Nete (%) pentru {entitate_grafic}**")
+      st.line_chart(df_ent.set_index("Perioada")[["Marja Neta (%)"]])
     else:
       st.info("Nu exista date inregistrate pentru aceasta entitate.")
   else:
