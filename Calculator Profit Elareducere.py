@@ -1,6 +1,7 @@
 from datetime import datetime
 import pandas as pd
 import streamlit as st
+from streamlit_gsheets import GSheetsConnection
 
 # Configurare pagină Streamlit
 st.set_page_config(
@@ -14,9 +15,9 @@ st.write(
 )
 
 try:
-  # Conexiune nativă Google Sheets folosind setările din Secrets
-  conn = st.connection("gsheets", type="gsheets")
-  df = conn.read(worksheet="Sheet1", ttl=0)
+  # Conexiune la Google Sheets folosind pachetul dedicat
+  conn = st.connection("gsheets", type=GSheetsConnection)
+  df = conn.read(ttl=0)
 
   if df is not None:
     st.success("Datele au fost încărcate cu succes din cloud!")
@@ -46,7 +47,7 @@ try:
           }])
 
           updated_df = pd.concat([df, noua_linie], ignore_index=True)
-          conn.update(worksheet="Sheet1", data=updated_df)
+          conn.update(data=updated_df)
 
           st.success("Datele au fost salvate cu succes în cloud!")
           st.rerun()
