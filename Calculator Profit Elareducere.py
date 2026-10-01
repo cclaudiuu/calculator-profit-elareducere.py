@@ -1,5 +1,4 @@
 import pandas as pd
-import plotly.express as px
 import streamlit as st
 
 # --- SECURITATE ---
@@ -244,7 +243,7 @@ elif meniu == "Jurnal Lunar & Istoric (Draghici / Claudiu)":
         m4.metric("Marja Neta", f"{r['Marja Neta (%)']}%")
 
     # --- STERGERE INREGISTRARE ---
-    with st.expander("⚙️️ Optiuni de stergere inregistrare gresita"):
+    with st.expander("⚙️ Optiuni de stergere inregistrare gresita"):
       optiuni_stergere = [
           f"{row.Index}: {row.Entitate} - {row.Luna} {row.An} (Vanzari:"
           f" {row.Vanzari} lei)"
@@ -262,9 +261,11 @@ elif meniu == "Jurnal Lunar & Istoric (Draghici / Claudiu)":
           st.success("Inregistrarea a fost stearsa!")
           st.rerun()
 
-    # --- GRAFICE CU BARE GRUPATE (UNA LANGA ALTA) FOLOSIND PLOTLY ---
+    # --- GRAFICE NATIVE CU BARE ALATURATE (FARA PLOTLY) ---
     st.divider()
-    st.subheader("📈 Evolutia financiara in timp (Bare grupate)")
+    st.subheader(
+        "📈 Evolutia financiara in timp (Bare alaturate nativ in Streamlit)"
+    )
 
     col_g1, col_g2 = st.columns(2)
     with col_g1:
@@ -281,37 +282,19 @@ elif meniu == "Jurnal Lunar & Istoric (Draghici / Claudiu)":
       df_ent = df_ent.sort_values(by=["An", "Luna_Numar"])
       df_ent["Perioada"] = df_ent["Luna"] + " " + df_ent.An.astype(str)
 
-      # Transformam datele in formatul potrivit pentru Plotly (melt)
-      df_melted = df_ent.melt(
-          id_vars=["Perioada"],
-          value_vars=["Vanzari", "Profit Net", "Publicitate"],
-          var_name="Indicator",
-          value_name="Valoare (Lei)",
-      )
+      # Pregatim datele exact ca o tabela unde coloanele sunt indicatorii
+      df_grafic_natif = df_ent.set_index("Perioada")[
+          ["Vanzari", "Profit Net", "Publicitate"]
+      ]
 
       st.markdown(
-          f"**1. Comparatie Valori (Lei) - Bare grupate una langa alta pentru"
+          f"**1. Comparatie Valori (Lei) - Bare una langa alta pentru"
           f" {entitate_grafic}**"
       )
-      fig_bare = px.bar(
-          df_melted,
-          x="Perioada",
-          y="Valoare (Lei)",
-          color="Indicator",
-          barmode="group",  # Aici fortam barele sa fie una langa alta
-          text_auto=".2s",
-      )
-      st.plotly_chart(fig_bare, use_container_width=True)
+      st.bar_chart(df_grafic_natif)
 
       st.markdown(f"**2. Evolutia Marjei Nete (%) pentru {entitate_grafic}**")
-      fig_marja = px.bar(
-          df_ent,
-          x="Perioada",
-          y="Marja Neta (%)",
-          text="Marja Neta (%)",
-          color_discrete_sequence=["indianred"],
-      )
-      st.plotly_chart(fig_marja, use_container_width=True)
+      st.bar_chart(df_ent.set_index("Perioada")[["Marja Neta (%)"]])
     else:
       st.info("Nu exista date inregistrate pentru aceasta entitate.")
   else:
